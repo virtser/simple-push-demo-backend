@@ -22,6 +22,9 @@ import json
 from google.appengine.api import urlfetch
 from google.appengine.ext import db
 
+
+endpoints = []
+
 class SendPushHandler(webapp2.RequestHandler):
   def post(self):
     logging.info('SendPushHandler')
@@ -29,8 +32,11 @@ class SendPushHandler(webapp2.RequestHandler):
     # Enable CORS
     self.response.headers.add_header("Access-Control-Allow-Origin", "*")
 
-    # Enable the endpoint
-    endpoint = self.request.get("endpoint")
+    # Enable the endpoint 
+    jsonstring = self.request.body
+    jsonobject = json.loads(jsonstring)
+
+    endpoint = jsonobject["endpoint"]
 
     headers = {}
     form_data = None
@@ -41,7 +47,7 @@ class SendPushHandler(webapp2.RequestHandler):
       authorization = self.request.get("authorization")
       payload = self.request.get("payload")
       if len(authorization) is 0:
-        authorization = 'AIzaSyBBh4ddPa96rQQNxqiq_qQj7sq1JdsNQUQ';
+        authorization = 'AIzaSyBlgvVGZEeBi2HPX-FPS6xgODvR6gg0hB0';
 
       headers = {
         'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
@@ -59,16 +65,17 @@ class SendPushHandler(webapp2.RequestHandler):
       logging.info('authorization: ' + authorization)
       logging.info('payload: ' + payload);
 
-      form_fields = {
-        "registration_id": subscriptionId,
-        "data": payload
-      }
-      form_data = urllib.urlencode(form_fields)
+      for e in endpoints:
+        form_fields = {
+          "registration_id": e,
+          "data": payload
+        }
+        form_data = urllib.urlencode(form_fields)
 
-    result = urlfetch.fetch(url=endpoint,
-                            payload=form_data,
-                            method=urlfetch.POST,
-                            headers=headers)
+        result = urlfetch.fetch(url=endpoint,
+                                payload=form_data,
+                                method=urlfetch.POST,
+                                headers=headers)
 
     if (result.status_code == 200 or result.status_code == 201) and not result.content.startswith("Error") :
       logging.info('Successful Request')
@@ -79,6 +86,35 @@ class SendPushHandler(webapp2.RequestHandler):
       logging.info(result.content)
       self.response.write('{ "success": false }')
 
+class SubscribeHandler(webapp2.RequestHandler):
+  def post(self):
+    logging.info('SubscribeHandler')
+    endpoint = self.request.body
+
+    try:
+     endpoints.index(endpoint)
+    except ValueError:
+      endpoints.append(endpoint)
+
+    print endpoints
+
+class UnsubscribeHandler(webapp2.RequestHandler):
+  def post(self):
+    logging.info('UnsubscribeHandler')
+    endpoint = self.request.body
+    endpoints.remove(endpoint)
+
+    print endpoints
+
+class EndpointsHandler(webapp2.RequestHandler):
+  def get(self):
+    logging.info('EndpointsHandler')
+    self.response.headers.add_header("Access-Control-Allow-Origin", "*")
+    self.response.write(endpoints)
+
 app = webapp2.WSGIApplication([
-  ('/send_push', SendPushHandler)
+  ('/send_push', SendPushHandler),
+  ('/subscribe', SubscribeHandler),
+  ('/unsubscribe', SubscribeHandler),
+  ('/endpoints', EndpointsHandler),
 ], debug=True)

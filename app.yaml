@@ -1,7 +1,7 @@
-application: simple-push-demo
-version: v2015-03-12
+application: trends-push
 runtime: python27
 api_version: 1
+version: 11
 threadsafe: yes
 
 handlers:
@@ -10,7 +10,19 @@ handlers:
   secure: always
   upload: frontend/dist/index\.html
 
+- url: /subscribe
+  secure: always
+  script: main.app
+
+- url: /unsubscribe
+  secure: always
+  script: main.app
+
 - url: /send_push
+  secure: always
+  script: main.app
+
+- url: /endpoints
   secure: always
   script: main.app
 
